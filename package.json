@@ -1,0 +1,39 @@
+{
+  "name": "zx-ai",
+  "version": "1.0.0",
+  "description": "Use ChatGPT, Gemini, Claude and DeepSeek from your own browser like a desktop coding assistant, with file tools and approvals. No API keys.",
+  "author": "Ebrahim Rashidi",
+  "license": "MIT",
+  "homepage": "https://github.com/Rashidizx/McpUseAI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rashidizx/McpUseAI.git"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "ext": "node scripts/build-extension.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p extension/tsconfig.json",
+    "check": "npm run typecheck && npm test && npm run ext",
+    "up": "node scripts/launcher.mjs",
+    "down": "node scripts/launcher.mjs --stop",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "8.18.2",
+    "esbuild": "0.28.2",
+    "postject": "1.0.0-alpha.6",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
+  }
+}

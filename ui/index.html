@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZX AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #eef1f5; --sheet: #ffffff; --ink: #1b2430; --muted: #5b6676; --line: #d6dce5;
+  --relay: #2f5bd3; --tool: #0e8a6a; --hold: #c77a12; --fault: #c2352b;
+  --relay-soft: #2f5bd31a; --hold-soft: #c77a121f; --fault-soft: #c2352b17;
+  --on-accent: #ffffff;
+  --body: "Vazirmatn", Tahoma, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", Consolas, "Vazirmatn", Tahoma, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #12161d; --sheet: #1a2029; --ink: #e5eaf1; --muted: #93a0b2; --line: #2a3340;
+    --relay: #7b9cff; --tool: #3cc69f; --hold: #f0a43a; --fault: #ff6f62;
+    --relay-soft: #7b9cff1f; --hold-soft: #f0a43a1f; --fault-soft: #ff6f621a;
+    --on-accent: #0d1117;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.75 var(--body); display: flex; flex-direction: column; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--sheet); border-radius: 8px; padding: 6px 12px; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--relay); border-color: var(--relay); color: var(--on-accent); font-weight: 700; }
+button.danger { color: var(--fault); }
+button:disabled { opacity: .45; cursor: default; }
+:focus-visible { outline: 2px solid var(--relay); outline-offset: 2px; }
+code, pre, .mono { font-family: var(--mono); font-size: 13px; }
+
+/* top bar */
+header { display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--sheet); flex-wrap: wrap; }
+.mark { font: 800 20px/1 var(--body); letter-spacing: -.02em; }
+.mark span { color: var(--relay); }
+.folder { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.folder b { color: var(--ink); font-weight: 500; direction: ltr; unicode-bidi: plaintext; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+select { border: 1px solid var(--line); background: var(--sheet); border-radius: 8px; padding: 6px 8px; }
+.dot { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.dot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--fault); }
+.dot.on::before { background: var(--tool); }
+
+.banner { margin: 12px auto 0; max-width: 860px; width: calc(100% - 32px); padding: 10px 14px; border-radius: 10px; background: var(--fault-soft); border: 1px solid var(--fault); }
+.banner[hidden] { display: none; }
+.banner code { direction: ltr; unicode-bidi: plaintext; }
+
+/* work area: conversation + files panel */
+.work { display: flex; flex: 1; min-height: 0; }
+.work main { flex: 1; min-width: 0; }
+aside.files { width: 290px; flex: none; border-inline-start: 1px solid var(--line); background: var(--sheet); overflow-y: auto; padding: 14px 12px; }
+.files h2 { font-size: 13px; font-weight: 800; margin: 0 0 2px; }
+.files .sub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.files .empty-files { font-size: 13px; color: var(--muted); }
+.frow { border: 1px solid transparent; border-radius: 10px; padding: 6px 8px; margin-bottom: 4px; cursor: pointer; }
+.frow:hover, .frow.open { border-color: var(--line); background: var(--paper); }
+.frow .line1 { display: flex; align-items: center; gap: 8px; }
+.frow .glyph { width: 18px; text-align: center; flex: none; }
+.frow .fpath { flex: 1; min-width: 0; direction: rtl; text-align: left; font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frow .fstate { font-size: 11.5px; white-space: nowrap; color: var(--muted); }
+.frow.live .glyph { animation: pulse 1.2s ease-in-out infinite; }
+.frow.reading .fstate, .frow.live .fstate { color: var(--relay); }
+.frow.approval { border-color: var(--hold); background: var(--hold-soft); }
+.frow.approval .fstate { color: var(--hold); font-weight: 700; }
+.frow.failed .fstate { color: var(--fault); }
+.frow .acts { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.frow .acts button { font-size: 12px; padding: 3px 9px; }
+.frow .diff { max-height: 300px; }
+#filesToggle, #filesClose { display: none; }
+.files .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+@media (max-width: 1100px) {
+  aside.files { position: fixed; inset-block: 0; inset-inline-end: 0; width: min(340px, 88vw); z-index: 20; box-shadow: 0 0 40px #0005; transform: translateX(-110%); transition: transform .2s; }
+  [dir="rtl"] aside.files { transform: translateX(-110%); }
+  aside.files.shown { transform: none; }
+  aside.files:not(.shown) { visibility: hidden; }
+  #filesToggle, #filesClose { display: inline-block; }
+}
+
+/* the relay rail */
+main { overflow-y: auto; padding: 24px 16px 8px; }
+.rail { max-width: 860px; margin: 0 auto; position: relative; padding-inline-start: 34px; }
+.rail::before { content: ""; position: absolute; inset-inline-start: 11px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.step { position: relative; margin-bottom: 18px; content-visibility: auto; contain-intrinsic-size: auto 60px; }
+.step::before {
+  content: ""; position: absolute; inset-inline-start: -29px; top: 9px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--paper); border: 2px solid var(--muted);
+}
+.who { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--muted); margin-bottom: 2px; }
+.body { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.user .body { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.user::before { border-color: var(--ink); background: var(--ink); }
+.assistant::before { border-color: var(--relay); background: var(--relay); }
+.assistant .who { color: var(--relay); }
+.assistant.live .body::after { content: "▍"; color: var(--relay); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.body pre { direction: ltr; text-align: left; background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; margin: 8px 0; }
+.call-chip { display: inline-block; direction: ltr; font-family: var(--mono); font-size: 12px; color: var(--relay); background: var(--relay-soft); border-radius: 6px; padding: 1px 8px; margin: 2px 0; }
+
+.tool::before { border-radius: 3px; border-color: var(--tool); width: 10px; height: 10px; inset-inline-start: -28px; top: 11px; }
+.tool.error::before { border-color: var(--fault); background: var(--fault); }
+.tool.running::before { border-color: var(--hold); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.35); } }
+.tool details { margin: 0; }
+.tool summary { list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: baseline; direction: ltr; justify-content: flex-end; flex-wrap: wrap; }
+.tool summary::-webkit-details-marker { display: none; }
+.tool .name { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--tool); }
+.tool.error .name { color: var(--fault); }
+.tool .what { font-family: var(--mono); font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.tool pre { direction: ltr; text-align: left; background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; max-height: 320px; overflow: auto; white-space: pre-wrap; margin: 6px 0 0; }
+
+.notice::before { border-color: var(--muted); border-style: dashed; }
+.notice .body { color: var(--muted); }
+.notice.error::before { border-color: var(--fault); }
+.notice.error .body { color: var(--fault); }
+.copy { font-size: 11px; padding: 1px 8px; margin-top: 4px; opacity: .7; }
+.copy:hover { opacity: 1; }
+.retry { display: flex; gap: 10px; align-items: center; margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+.empty { color: var(--muted); max-width: 520px; }
+.empty h2 { font-size: 22px; font-weight: 800; color: var(--ink); margin: 0 0 4px; }
+
+/* the gate: approvals stop the rail */
+.gate { max-width: 860px; width: calc(100% - 32px); margin: 0 auto 10px; display: grid; gap: 10px; }
+.card { min-width: 0; overflow: hidden; border: 1.5px solid var(--hold); background: var(--hold-soft); border-radius: 12px; padding: 12px 14px; }
+.card .top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.badge { font-size: 12px; font-weight: 700; padding: 1px 10px; border-radius: 999px; background: var(--hold); color: var(--on-accent); }
+.badge.exec, .badge.destructive { background: var(--fault); }
+.card .what { flex: 1 1 100%; min-width: 0; font-family: var(--mono); font-size: 13px; direction: ltr; text-align: left; overflow-wrap: anywhere; }
+.card pre { direction: ltr; text-align: left; max-height: 220px; overflow: auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; white-space: pre-wrap; }
+.card .actions { display: flex; gap: 8px; }
+
+/* composer */
+footer { padding: 0 16px 16px; }
+header, .banner, footer { flex: none; }
+/* status line */
+.status { max-width: 860px; margin: 0 auto 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); min-height: 22px; }
+.status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.status.busy { color: var(--relay); }
+.status.busy::before { background: var(--relay); animation: pulse 1.2s ease-in-out infinite; }
+.status.hold { color: var(--hold); font-weight: 700; }
+.status.hold::before { background: var(--hold); }
+.status.bad { color: var(--fault); font-weight: 700; }
+.status.bad::before { background: var(--fault); }
+.status.good::before { background: var(--tool); }
+.status .clock { font-family: var(--mono); font-size: 12px; opacity: .8; }
+
+/* per-request footer */
+.turnfoot { max-width: 860px; margin: -8px 0 22px; display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--muted); }
+.turnfoot button { font-size: 12px; padding: 2px 10px; border-radius: 999px; }
+
+/* file changes */
+.chg { font-family: var(--mono); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.chg .add { color: var(--tool); } .chg .del { color: var(--fault); }
+.chg .new { color: var(--muted); font-weight: 400; margin-inline-start: 4px; }
+.diff { direction: ltr; text-align: left; background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; margin: 6px 0 0; max-height: 420px; overflow: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; }
+.diff .hunk { background: var(--relay-soft); color: var(--relay); padding: 2px 10px; position: sticky; left: 0; }
+.diff .ln { display: grid; grid-template-columns: 44px 44px 16px minmax(0, 1fr); white-space: pre; }
+.diff .ln span:nth-child(4) { white-space: pre-wrap; overflow-wrap: anywhere; }
+.card .diff { max-height: 170px; }
+.diff .ln span:nth-child(-n+2) { color: var(--muted); text-align: right; padding-right: 8px; user-select: none; opacity: .7; }
+.diff .ln span:nth-child(3) { user-select: none; text-align: center; }
+.diff .ln.add { background: #0e8a6a1f; } .diff .ln.add span:nth-child(3) { color: var(--tool); }
+.diff .ln.del { background: #c2352b1a; } .diff .ln.del span:nth-child(3) { color: var(--fault); }
+.diff .more { padding: 4px 10px; color: var(--muted); }
+.diff-path { font-family: var(--mono); font-size: 12px; color: var(--muted); direction: ltr; text-align: left; margin-top: 6px; }
+
+.composer { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 6px 8px 8px; }
+.composer:focus-within { border-color: var(--relay); }
+.composer textarea { border: 0; background: transparent; resize: none; min-height: 44px; max-height: 40vh; padding: 8px; outline: none; unicode-bidi: plaintext; }
+.cbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cbar .keys { flex: 1; font-size: 12px; color: var(--muted); text-align: end; }
+.mode { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 0 4px 0 10px; font-size: 13px; }
+.mode select { border: 0; background: transparent; padding: 4px 2px; font-weight: 700; }
+.mode.edits { border-color: var(--relay); color: var(--relay); }
+.mode.all { border-color: var(--fault); color: var(--fault); background: var(--fault-soft); }
+.mode.readonly { border-color: var(--tool); color: var(--tool); }
+.allowed { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.allowed span { font-size: 12px; border-radius: 999px; padding: 1px 9px; background: var(--hold-soft); color: var(--hold); }
+.hint { max-width: 860px; margin: 6px auto 0; font-size: 12px; color: var(--muted); }
+.hint.warn { color: var(--fault); font-weight: 700; }
+button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 4px 8px; }
+button.ghost:hover { color: var(--ink); border-color: var(--line); }
+
+/* answers: light markdown */
+.assistant .body { white-space: normal; }
+.body .p, .body li, .body .h { unicode-bidi: plaintext; white-space: pre-wrap; }
+.body .gap { height: .55em; }
+.body .h { font-weight: 800; margin: 6px 0 2px; }
+.body ul, .body ol { margin: 4px 0; padding-inline-start: 22px; }
+.body code.ic { background: var(--relay-soft); border-radius: 4px; padding: 0 5px; direction: ltr; unicode-bidi: isolate; }
+
+/* empty state */
+.quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.quick button { border-radius: 999px; font-size: 13px; }
+.card .actions { flex-wrap: wrap; }
+.card kbd { font-family: var(--mono); font-size: 11px; opacity: .7; margin-inline-start: 4px; }
+
+/* about */
+.about-card { text-align: center; }
+.about-mark { font: 800 34px/1 var(--body); margin-top: 6px; }
+.about-mark span { color: var(--relay); }
+.about-ver { font: 600 13px var(--mono); color: var(--muted); }
+.about-author { display: grid; gap: 2px; margin: 14px auto; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; max-width: 280px; }
+.about-author b { font-size: 18px; }
+.about-author span { color: var(--muted); font-size: 13px; }
+.about-join { color: var(--muted); }
+.about-card a { color: var(--relay); }
+.about-meta { font: 12px var(--mono); color: var(--muted); }
+.about-card .close { justify-content: center; }
+
+/* settings modes */
+.modes { display: grid; gap: 6px; }
+.modes label { display: flex; align-items: flex-start; gap: 8px; margin: 0; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.modes label:has(input:checked) { border-color: var(--relay); background: var(--relay-soft); }
+.modes small { display: block; color: var(--muted); }
+dialog details summary { cursor: pointer; font-size: 14px; color: var(--muted); font-weight: 700; margin: 14px 0 6px; }
+
+/* settings */
+dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--sheet); color: var(--ink); width: min(720px, calc(100% - 32px)); padding: 0; }
+dialog::backdrop { background: #0008; }
+dialog form { padding: 18px 20px; }
+dialog h2 { margin: 0 0 12px; font-size: 18px; }
+dialog h3 { font-size: 14px; margin: 18px 0 6px; color: var(--muted); }
+dialog label { display: inline-flex; gap: 6px; align-items: center; margin-inline-end: 14px; }
+dialog input[type=text], dialog input[type=number] { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--paper); }
+dialog textarea { width: 100%; min-height: 220px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--paper); direction: ltr; text-align: left; font-family: var(--mono); font-size: 12.5px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.out { font-size: 13px; margin-top: 6px; white-space: pre-wrap; direction: ltr; text-align: left; font-family: var(--mono); }
+.audit { max-height: 200px; overflow: auto; font-family: var(--mono); font-size: 12px; direction: ltr; text-align: left; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.close { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+.about { font-size: 12px; color: var(--muted); direction: ltr; }
+
+/* Phones and narrow windows: the rail, the gate and the composer stay usable at 320px. */
+@supports (height: 100dvh) { body { height: 100dvh; } }
+.gate { max-height: 30vh; max-height: 30dvh; overflow-y: auto; overflow-x: hidden; }
+.toast { max-width: 860px; margin: 0 auto 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--fault); background: var(--fault-soft); color: var(--fault); font-size: 13px; }
+.toast[hidden] { display: none; }
+.hint button { font-size: 12px; padding: 1px 10px; margin-inline-start: 6px; }
+body.offline .composer, body.offline header button:not(#gear) { opacity: .5; pointer-events: none; }
+@media (max-width: 760px) {
+  header { padding: 8px 12px; gap: 6px 8px; }
+  .mark { font-size: 18px; }
+  .folder { order: 5; flex-basis: 100%; font-size: 13px; gap: 6px; }
+  header button, header select { padding: 5px 9px; font-size: 13px; }
+  main { padding: 16px 10px 6px; }
+  .rail { padding-inline-start: 26px; }
+  .rail::before { inset-inline-start: 7px; }
+  .step::before { inset-inline-start: -25px; }
+  .tool::before { inset-inline-start: -24px; }
+  .banner { width: calc(100% - 20px); font-size: 13px; }
+  footer { padding: 0 10px 10px; }
+  .gate, .status, .composer, .hint { width: 100%; }
+  .card .top { flex-direction: column; align-items: stretch; gap: 6px; }
+  .card .actions button { flex: 1; padding: 10px; }
+  .composer textarea { font-size: 16px; }
+  .diff { font-size: 11.5px; }
+  .diff .ln { grid-template-columns: 30px 30px 14px 1fr; }
+  .turnfoot { flex-wrap: wrap; margin-top: -10px; }
+  .cbar .keys { display: none; }
+  .cbar #send { margin-inline-start: auto; }
+  dialog { width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; border: 0; }
+  dialog label { display: flex; margin: 6px 0; }
+  dialog .row input[type=text] { min-width: 0; width: 100%; }
+}
+@media (max-width: 380px) {
+  #power { display: none; }
+  #show, #fresh, #gear { padding: 5px 7px; }
+  .tool summary { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant.live .body::after, .tool.running::before { animation: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="mark" id="mark">Z<span>X</span></div>
+  <div class="folder">📁 <b id="folder">—</b> <button id="open" class="ghost" type="button" title="پوشه را در Explorer باز کن">باز کردن</button> <button id="pick" class="ghost" type="button" title="پوشه‌ی دیگری انتخاب کن">تغییر…</button></div>
+  <select id="site" aria-label="سایت چت"></select>
+  <span id="ext" class="dot">افزونه</span>
+  <button id="show" type="button" title="تب سایت چت را جلو بیاور">نمایش تب</button>
+  <button id="fresh" type="button" title="گفتگوی تازه؛ مجوزهای «همیشه» هم پاک می‌شوند">＋ گفتگوی تازه</button>
+  <button id="filesToggle" type="button">فایل‌ها</button>
+  <button id="gear" type="button" title="تنظیمات">⚙ تنظیمات</button>
+  <button id="aboutBtn" class="ghost" type="button" title="درباره‌ی ZX AI و سازنده">ⓘ</button>
+  <button id="power" class="ghost" type="button" title="ZX را خاموش کن">⏻</button>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<div class="work">
+  <main id="scroller">
+    <div id="rail" class="rail"></div>
+  </main>
+  <aside id="files" class="files" aria-label="فایل‌های این گفتگو">
+    <div class="head"><h2>فایل‌های این گفتگو</h2><button id="filesClose" class="ghost" type="button" aria-label="بستن">✕</button></div>
+    <div class="sub">هر فایلی که خوانده یا نوشته می‌شود، همین‌جا زنده دیده می‌شود.</div>
+    <div id="fileList"></div>
+  </aside>
+</div>
+
+<footer>
+  <div id="gate" class="gate"></div>
+  <div id="toast" class="toast" role="alert" hidden></div>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="کار را بنویسید؛ مثلاً: فایل README را بخوان و خلاصه‌اش را بگو"></textarea>
+    <div class="cbar">
+      <label id="modeWrap" class="mode" title="مجوز نوشتن و اجرا">🛡
+        <select id="mode" aria-label="مجوزها">
+          <option value="ask">همیشه بپرس</option>
+          <option value="edits">ویرایش‌ها خودکار</option>
+          <option value="all">همه خودکار</option>
+          <option value="readonly">فقط خواندن</option>
+        </select>
+      </label>
+      <span id="allowed" class="allowed"></span>
+      <span class="keys">Enter ارسال · Shift+Enter خط تازه · Esc توقف · ↑ پیام قبلی</span>
+      <button id="send" class="primary" type="button">ارسال</button>
+    </div>
+  </div>
+  <div id="modeNote" class="hint"></div>
+</footer>
+
+<dialog id="aboutBox" aria-labelledby="aboutTitle">
+  <form method="dialog" class="about-card">
+    <div class="about-mark">Z<span>X</span></div>
+    <h2 id="aboutTitle">ZX AI <span id="aboutVersion" class="about-ver"></span></h2>
+    <p>کار با ChatGPT، Gemini، Claude و DeepSeek از راه مرورگر خودتان، با خواندن و نوشتن فایل‌های پروژه، مثل یک محیط توسعه‌ی دسکتاپ و بدون کلید API.</p>
+    <div class="about-author">
+      <small>سازنده</small>
+      <b>ابراهیم رشیدی</b>
+      <span dir="ltr">Ebrahim Rashidi</span>
+    </div>
+    <p class="about-join">هر برنامه‌نویسی که بخواهد می‌تواند به توسعه‌ی این پروژه بپیوندد: در GitHub یک issue باز کنید یا pull request بفرستید. راهنمای شروع در <code>docs/DEVELOPMENT.md</code> است.</p>
+    <p><a href="https://github.com/Rashidizx/McpUseAI" target="_blank" rel="noopener" dir="ltr">github.com/Rashidizx/McpUseAI</a></p>
+    <p class="about-meta" id="aboutMeta" dir="ltr"></p>
+    <div class="close"><button value="close">بستن</button></div>
+  </form>
+</dialog>
+
+<dialog id="settings">
+  <form method="dialog">
+    <h2>تنظیمات</h2>
+
+    <h3>پوشه‌ی کاری</h3>
+    <div class="row"><input id="wsPath" type="text" dir="ltr" style="flex:1" placeholder="C:\path\to\project"><button id="wsSave" type="button">ذخیره</button></div>
+
+    <h3>مجوزها</h3>
+    <div id="modes" class="modes"></div>
+
+    <h3>محدودیت‌ها</h3>
+    <label>حداکثر گام در هر درخواست <input id="maxSteps" type="number" min="1" max="200" style="width:80px"></label>
+    <label>حداکثر طول پیام <input id="maxChars" type="number" min="2000" max="200000" step="1000" style="width:110px"></label>
+    <div class="row" style="margin-top:8px"><button id="limitsSave" type="button">ذخیره</button></div>
+
+    <h3>سایت <span id="siteName"></span></h3>
+    <div class="row">
+      <button id="probe" type="button">بررسی سایت</button>
+      <button id="restartApp" type="button">راه‌اندازی دوباره‌ی ZX</button>
+    </div>
+    <div id="siteOut" class="out"></div>
+
+    <details>
+      <summary>انتخابگرهای سایت (پیشرفته)</summary>
+      <textarea id="siteJson" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="siteSave" type="button">ذخیره</button>
+        <button id="siteReset" type="button">بازگشت به پیش‌فرض</button>
+      </div>
+      <div class="hint" style="margin:6px 0 0">برای سایت تازه، شناسه‌ی جدید بگذارید و اول در تنظیمات افزونه به آن سایت اجازه دهید.</div>
+    </details>
+
+    <details>
+      <summary>کارهای انجام‌شده (ممیزی)</summary>
+      <div id="audit" class="audit"></div>
+    </details>
+
+    <details>
+      <summary>گزارش افزونه</summary>
+      <div id="extlog" class="audit"></div>
+    </details>
+
+    <div class="close"><button value="close">بستن</button><span id="about" class="about"></span></div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const CLASS = { read: "خواندن", write: "نوشتن", destructive: "تغییر مخرب", exec: "اجرای برنامه" };
+const TOOL = { fs_write: "نوشتن فایل", fs_apply_diff: "ویرایش فایل", exec: "اجرای برنامه" };
+const MODES = {
+  ask: ["همیشه بپرس", "هر نوشتن و هر اجرای برنامه منتظر اجازه‌ی شما می‌ماند."],
+  edits: ["ویرایش‌ها خودکار", "فایل‌ها بی‌پرسش نوشته می‌شوند؛ اجرای برنامه هنوز اجازه می‌خواهد."],
+  all: ["همه خودکار", "هیچ چیز پرسیده نمی‌شود. فقط برای پوشه‌ای که به آن اطمینان دارید."],
+  readonly: ["فقط خواندن", "نوشتن و اجرا بی‌پرسش رد می‌شود؛ فقط خوانده می‌شود."],
+};
+const QUICK = [
+  "ساختار این پروژه را بررسی کن و خلاصه بگو",
+  "فایل README را بخوان و خلاصه‌اش را بگو",
+  "باگ‌ها و مشکلات احتمالی کد را پیدا کن",
+  "تست‌ها را اجرا کن و نتیجه را بگو",
+];
+let state = null;
+const nodes = new Map();
+
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  return data;
+}
+
+let toastTimer = null;
+function toast(text) {
+  const box = $("toast");
+  box.textContent = text;
+  box.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (box.hidden = true), 7000);
+}
+
+async function act(path, body) {
+  try { return await api(path, body ?? {}); }
+  catch (error) { toast(error.message === "Failed to fetch" ? "ZX جواب نمی‌دهد." : error.message); }
+}
+
+/** Write text only when it differs: a push arrives ten times a second while a reply streams. */
+function setText(node, text) {
+  if (node.textContent !== text) node.textContent = text;
+}
+function setClass(node, cls) {
+  if (node.className !== cls) node.className = cls;
+}
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+/** **bold** and `code` inside one line, as nodes (never as HTML). */
+function inline(target, text) {
+  let at = 0;
+  for (const m of text.matchAll(/\*\*[^*\n]+\*\*|`[^`\n]+`/g)) {
+    if (m.index > at) target.append(text.slice(at, m.index));
+    target.append(m[0][0] === "`" ? el("code", "ic", m[0].slice(1, -1)) : el("strong", "", m[0].slice(2, -2)));
+    at = m.index + m[0].length;
+  }
+  if (at < text.length) target.append(text.slice(at));
+}
+
+/** Headings, lists and paragraphs; enough markdown for chat answers. */
+function prose(target, lines) {
+  let list = null;
+  for (const line of lines) {
+    const h = /^\s{0,3}#{1,4}\s+(.*)$/.exec(line);
+    const li = /^\s*([-*•]|\d+[.)])\s+(.*)$/.exec(line);
+    if (li) {
+      const tag = /\d/.test(li[1]) ? "OL" : "UL";
+      if (list?.tagName !== tag) {
+        list = el(tag.toLowerCase());
+        if (tag === "OL") list.start = parseInt(li[1], 10) || 1;
+        target.append(list);
+      }
+      const item = el("li"); inline(item, li[2]); list.append(item);
+      continue;
+    }
+    list = null;
+    if (line.trim() === "") { if (target.lastChild && target.lastChild.className !== "gap") target.append(el("div", "gap")); continue; }
+    const node = el("div", h ? "h" : "p");
+    inline(node, h ? h[1] : line);
+    target.append(node);
+  }
+}
+
+/** Assistant text with code blocks as <pre>, and tool-call blocks as a chip. */
+function renderText(target, text) {
+  target.replaceChildren();
+  const lines = text.split("\n");
+  let buffer = [];
+  const flush = () => { if (buffer.length) { prose(target, buffer); buffer = []; } };
+  for (let i = 0; i < lines.length; i++) {
+    const open = /^\s*(`{3,})\s*([\w+#.-]*)/.exec(lines[i]);
+    if (!open) { buffer.push(lines[i]); continue; }
+    flush();
+    const body = [];
+    for (i++; i < lines.length && lines[i].trim() !== open[1]; i++) body.push(lines[i]);
+    const code = body.join("\n");
+    const call = /^\s*[\[{]\s*"tool"\s*:\s*"([a-z_]+)"/.exec(code);
+    if (call && (open[2] === "zx" || open[2] === "" || open[2] === "json")) { const row = el("div"); row.append(el("span", "call-chip", `→ ${call[1]}`)); target.append(row); }
+    else target.append(el("pre", "", code));
+  }
+  flush();
+}
+
+function chip(diff) {
+  const span = el("span", "chg");
+  span.append(el("span", "add", `+${diff.added}`), " ", el("span", "del", `−${diff.removed}`));
+  if (diff.created) span.append(el("span", "new", "فایل تازه"));
+  return span;
+}
+
+/** A git-style view of one file's change. */
+function renderDiff(diff) {
+  const box = el("div", "diff");
+  for (const hunk of diff.hunks) {
+    box.append(el("div", "hunk", `@@ -${hunk.oldStart} +${hunk.newStart} @@`));
+    for (const line of hunk.lines) {
+      const row = el("div", "ln" + (line.type === "+" ? " add" : line.type === "-" ? " del" : ""));
+      row.append(el("span", "", line.old ?? ""), el("span", "", line.new ?? ""), el("span", "", line.type), el("span", "", line.text));
+      box.append(row);
+    }
+  }
+  if (diff.truncated) box.append(el("div", "more", "… بقیه‌ی تغییرات برای نمایش زیاد است"));
+  if (diff.hunks.length === 0) box.append(el("div", "more", "بدون تغییر"));
+  return box;
+}
+
+function stepFor(item) {
+  let node = nodes.get(item.id);
+  if (!node) {
+    node = el("div", "step");
+    node.append(el("div", "who"), el("div", "body"));
+    nodes.set(item.id, node);
+    $("rail").append(node);
+  }
+  const who = node.firstChild, body = node.lastChild;
+  if (item.kind === "user") {
+    setClass(node, "step user"); setText(who, "شما");
+    setText(body, item.text);
+  } else if (item.kind === "assistant") {
+    setClass(node, "step assistant" + (item.streaming ? " live" : ""));
+    // Named once: switching sites later must not relabel earlier answers.
+    if (who.textContent === "") who.textContent = state.sites.find((s) => s.id === state.siteId)?.label ?? "مدل";
+    if (node._text !== item.text || node._live !== item.streaming) {
+      node._text = item.text;
+      node._live = item.streaming;
+      renderText(body, item.text);
+      // A reply that is only tool calls has nothing worth copying.
+      const prose = item.text.replace(/(`{3,})[\s\S]*?\1/g, "").trim();
+      if (!item.streaming && prose !== "") {
+        const copy = el("button", "copy", "کپی");
+        copy.onclick = async () => {
+          const ok = await navigator.clipboard.writeText(item.text).then(() => true, () => false);
+          copy.textContent = ok ? "کپی شد" : "کپی نشد";
+          setTimeout(() => (copy.textContent = "کپی"), 1500);
+        };
+        body.append(copy);
+      }
+    }
+  } else if (item.kind === "tool") {
+    setClass(node, `step tool ${item.status}`);
+    setText(who, "");
+    const key = `${item.status}|${item.summary}|${item.output.length}|${item.change ? item.change.added + "/" + item.change.removed : ""}`;
+    if (node.dataset.key !== key) {
+      node.dataset.key = key;
+      const open = body.querySelector("details")?.open ?? false;
+      const details = el("details");
+      details.open = open;
+      const summary = el("summary");
+      summary.append(el("span", "what", item.summary), el("span", "name", item.tool));
+      if (item.change) {
+        summary.append(chip(item.change));
+        details.append(summary, renderDiff(item.change));
+      } else {
+        details.append(summary, el("pre", "", item.output || (item.status === "running" ? "…" : "")));
+      }
+      body.replaceChildren(details);
+    }
+  } else {
+    setClass(node, `step notice ${item.level}`); setText(who, "");
+    const canRetry = item.retry && state.canRetry;
+    const key = `${item.text}|${canRetry}|${state.attempts}`;
+    if (node.dataset.key !== key) {
+      node.dataset.key = key;
+      body.replaceChildren(item.text);
+      if (canRetry) {
+        const row = el("div", "retry");
+        const again = el("button", "primary", "تلاش دوباره");
+        again.onclick = () => { again.disabled = true; act("/api/retry"); };
+        row.append(again, el("span", "", `تا حالا ${state.attempts} بار فرستاده شده`));
+        body.append(row);
+      }
+    }
+  }
+}
+
+function renderRail() {
+  if (nodes.size > 0) {
+    const ids = new Set(state.items.map((i) => i.id));
+    for (const [id, node] of nodes) if (!ids.has(id)) { node.remove(); nodes.delete(id); }
+  }
+  const existing = $("rail").querySelector(".empty");
+  if (state.items.length > 0) existing?.remove();
+  else if (existing === null) {
+    const site = state.sites.find((s) => s.id === state.siteId)?.label ?? "";
+    const empty = el("div", "empty");
+    const quick = el("div", "quick");
+    for (const text of QUICK) {
+      const b = el("button", "", text);
+      b.type = "button";
+      b.onclick = () => { input.value = text; grow(); input.focus(); };
+      quick.append(b);
+    }
+    empty.append(el("h2", "", "کاری بخواهید."),
+      el("p", "", `پیام شما در ${site} نوشته می‌شود و پاسخ اینجا می‌آید. هر کاری روی فایل‌های پوشه انجام شود، روی همین خط دیده می‌شود.`),
+      quick);
+    $("rail").append(empty);
+  }
+  for (const item of state.items) stepFor(item);
+}
+
+function renderGate() {
+  const gate = $("gate");
+  const ids = state.pending.map((p) => p.id).join(",");
+  if (gate.dataset.ids === ids) return;
+  gate.dataset.ids = ids;
+  gate.replaceChildren(...state.pending.map((p) => {
+    const card = el("div", "card");
+    const top = el("div", "top");
+    top.append(el("span", `badge ${p.opClass}`, CLASS[p.opClass] ?? p.opClass));
+    const actions = el("div", "actions");
+    const button = (cls, text, key, decision) => {
+      const b = el("button", cls, text);
+      b.append(el("kbd", "", key));
+      b.title = `کلید ${key}`;
+      b.onclick = () => act("/api/approve", { id: p.id, decision });
+      return b;
+    };
+    actions.append(button("primary", "اجازه بده", "Y", "approved"),
+      button("", `همیشه در این گفتگو`, "A", "always"),
+      button("danger", "رد کن", "N", "denied"));
+    top.append(actions, el("span", "what", `${p.toolName}: ${p.summary}`));
+    const args = p.arguments ?? {};
+    const shown = typeof args.content === "string" ? args.content
+      : typeof args.new_text === "string" ? `- ${args.old_text}\n+ ${args.new_text}`
+      : JSON.stringify(args, null, 2);
+    if (p.diff) {
+      top.insertBefore(chip(p.diff), actions);
+      card.append(top, el("div", "diff-path", p.diff.path), renderDiff(p.diff));
+    } else {
+      card.append(top, el("pre", "", shown));
+    }
+    return card;
+  }));
+}
+
+function renderBar() {
+  $("mark").title = `ZX AI ${state.version}`;
+  setText($("about"), `ZX AI ${state.version} · افزونه ${state.extension.version ?? "—"}`);
+  setText($("folder"), state.workspace ?? "انتخاب نشده");
+  $("folder").title = state.workspace ?? "";
+  const select = $("site");
+  const options = state.sites.map((s) => `${s.id}:${s.label}`).join("|");
+  if (select.dataset.options !== options) {
+    select.dataset.options = options;
+    select.replaceChildren(...state.sites.map((s) => { const o = el("option", "", s.label); o.value = s.id; return o; }));
+  }
+  select.value = state.siteId;
+  select.disabled = state.busy;
+  const ext = $("ext");
+  setClass(ext, "dot" + (state.extension.connected ? " on" : ""));
+  setText(ext, state.extension.connected ? `افزونه وصل${state.extension.browser ? ` · ${state.extension.browser}` : ""}` : state.extension.reconnecting ? "اتصال دوباره به افزونه…" : "افزونه وصل نیست");
+  $("fresh").disabled = state.busy;
+  $("open").disabled = !state.workspace;
+  $("pick").disabled = state.busy;
+  const send = $("send");
+  setText(send, state.busy ? "توقف" : "ارسال");
+  setClass(send, state.busy ? "danger" : "primary");
+
+  const mode = state.settings.mode;
+  if (modeTimer === null && document.activeElement !== $("mode")) $("mode").value = mode;
+  setClass($("modeWrap"), `mode ${mode}`);
+  $("modeWrap").title = MODES[mode]?.[1] ?? "";
+  if (!modeAsking) {
+    const note = $("modeNote");
+    setText(note, mode === "ask" ? "" : `${MODES[mode][0]}: ${MODES[mode][1]}`);
+    setClass(note, mode === "all" ? "hint warn" : "hint");
+  }
+  const allowedKey = state.allowed.join(",");
+  if ($("allowed").dataset.key !== allowedKey) {
+    $("allowed").dataset.key = allowedKey;
+    $("allowed").replaceChildren(...state.allowed.map((t) => {
+      const s = el("span", "", `✓ ${TOOL[t] ?? t}`);
+      s.title = "در این گفتگو بی‌پرسش؛ با «گفتگوی تازه» پاک می‌شود";
+      return s;
+    }));
+  }
+
+  const banner = $("banner");
+  const why = !state.workspace ? "folder" : !state.extension.connected ? "extension" : !state.extension.current ? "old" : state.extension.rival ? `rival:${state.extension.rival}` : "";
+  if (banner.dataset.why === why) return;
+  banner.dataset.why = why;
+  if (why === "folder") {
+    banner.hidden = false;
+    banner.replaceChildren("اول پوشه‌ی پروژه را انتخاب کنید (دکمه‌ی «تغییر…» بالا). ابزارها فقط داخل همان پوشه کار می‌کنند.");
+  } else if (why === "extension") {
+    banner.hidden = false;
+    banner.replaceChildren("افزونه‌ی Chrome وصل نیست. یک بار: ", el("code", "", "chrome://extensions"),
+      " ← Developer mode ← Load unpacked ← پوشه‌ی ", el("code", "", "extension/dist"),
+      ". اگر نصب است، Chrome را باز نگه دارید؛ ظرف ۳۰ ثانیه وصل می‌شود.");
+  } else if (why.startsWith("rival:")) {
+    banner.hidden = false;
+    banner.replaceChildren(`ZX در ${state.extension.rival} هم فعال است، ولی فقط یک مرورگر وصل می‌ماند (الان ${state.extension.browser ?? "این"}). برای بردن ZX به ${state.extension.rival}، در پنل کناری آن «وصل کردن این مرورگر» را بزنید؛ یا افزونه را در یکی خاموش کنید.`);
+  } else if (why === "old") {
+    banner.hidden = false;
+    banner.replaceChildren("افزونه‌ی Chrome قدیمی است. یک بار در ", el("code", "", "chrome://extensions"),
+      " دکمه‌ی بارگذاری دوباره‌ی ZX AI را بزنید؛ از این به بعد خودکار به‌روز می‌شود.");
+  } else banner.hidden = true;
+}
+
+const footers = new Map();
+
+/** Under each request: how many times it was sent, and a way to send it again from the start. */
+function renderFooters() {
+  const lastTurn = state.items.at(-1)?.turn;
+  const turns = new Map();
+  const users = new Map();
+  for (const item of state.items) {
+    turns.set(item.turn, item);
+    if (item.kind === "user") users.set(item.turn, item);
+  }
+  for (const [turn, node] of footers) if (!turns.has(turn)) { node.remove(); footers.delete(turn); }
+  for (const [turn, last] of turns) {
+    const user = users.get(turn);
+    if (!user) continue;
+    let foot = footers.get(turn);
+    if (!foot) { foot = el("div", "turnfoot"); footers.set(turn, foot); }
+    const latest = turn === lastTurn;
+    const key = `${user.sends}|${latest && state.canRestart}`;
+    if (foot.dataset.key !== key) {
+      foot.dataset.key = key;
+      foot.replaceChildren(el("span", "", `ارسال‌ها: ${user.sends}`));
+      if (latest && state.canRestart) {
+        const again = el("button", "", "↻ ارسال دوباره از اول");
+        again.title = "همین درخواست را از اول دوباره به سایت بفرست";
+        again.onclick = () => { again.disabled = true; act("/api/restart"); };
+        foot.append(again);
+      }
+    }
+    const anchor = nodes.get(last.id);
+    if (anchor && anchor.nextSibling !== foot) anchor.after(foot);
+  }
+}
+
+const PHASES = {
+  idle: ["", "آماده"],
+  opening: ["busy", "باز کردن تب {site}…"],
+  typing: ["busy", "نوشتن پیام در {site}…"],
+  sending: ["busy", "در حال ارسال…"],
+  waiting: ["busy", "در انتظار پاسخ {site}…"],
+  receiving: ["busy", "در حال دریافت پاسخ…"],
+  tool: ["busy", "اجرای ابزار {detail}…"],
+  approval: ["hold", "در انتظار اجازه‌ی شما · Y اجازه · A همیشه در این گفتگو · N رد"],
+  hidden: ["hold", "{site} در پس‌زمینه هنوز چیزی ننوشته. صبر کنید، یا اگر می‌خواهید «نمایش تب» را بزنید."],
+  retrying: ["busy", "ارسال نشد؛ تلاش دوباره ({detail})…"],
+  done: ["good", "پاسخ کامل شد"],
+  error: ["bad", "خطا: {detail}"],
+  stopped: ["", "متوقف شد"],
+};
+let busySince = null;
+
+function renderStatus() {
+  const line = $("status");
+  const site = state.sites.find((s) => s.id === state.siteId)?.label ?? "";
+  let [tone, text] = PHASES[state.status.phase] ?? ["", state.status.phase];
+  if (state.extension.reconnecting) { tone = "hold"; text = "افزونه قطع شد؛ منتظر اتصال دوباره تا پاسخ ادامه پیدا کند…"; }
+  else if (!state.extension.connected && !state.busy) { tone = "bad"; text = "افزونه وصل نیست"; }
+  text = text.replaceAll("{site}", site).replaceAll("{detail}", state.status.detail);
+  if (state.status.phase === "error" && !state.status.detail) text = "خطا";
+  if (state.busy && busySince === null) busySince = Date.now();
+  if (!state.busy) busySince = null;
+  setClass(line, `status ${tone}`);
+  if (line._text !== text) {
+    line._text = text;
+    const clock = el("span", "clock");
+    clock.setAttribute("aria-hidden", "true");
+    line.replaceChildren(text, clock);
+  }
+  setText(line.lastChild, busySince === null ? "" : `${Math.round((Date.now() - busySince) / 1000)}s`);
+}
+setInterval(() => { if (state && state.busy) renderStatus(); }, 1000);
+
+const READS = { fs_read: "read", fs_list: "list", fs_grep: "search" };
+const openRows = new Set();
+
+/** One row per path touched in this conversation, newest first. */
+function fileActivity() {
+  const files = new Map();
+  for (const item of state.items) {
+    if (item.kind !== "tool") continue;
+    const a = item.args ?? {};
+    const path = a.file_path ?? a.dir_path ?? (item.tool === "fs_grep" ? (a.path ?? ".") : null);
+    if (typeof path !== "string") continue;
+    const f = files.get(path) ?? { path, reads: 0, writes: 0, added: 0, removed: 0, created: false, change: null, state: "", last: 0, dir: false };
+    const writes = item.tool === "fs_write" || item.tool === "fs_apply_diff";
+    f.dir = f.dir || item.tool === "fs_list" || (item.tool === "fs_grep" && !/\.[\w-]+$/.test(path));
+    f.last = item.id;
+    if (item.status === "running") f.state = writes ? "writing" : "reading";
+    else if (item.status === "error") f.state = writes ? "write-failed" : "read-failed";
+    else if (writes) {
+      f.writes++;
+      if (item.change) { f.added += item.change.added; f.removed += item.change.removed; f.created ||= item.change.created; f.change = item.change; }
+      f.state = f.created ? "created" : "edited";
+    } else {
+      f.reads++;
+      if (f.writes === 0) f.state = READS[item.tool] ?? "read";
+    }
+    files.set(path, f);
+  }
+  for (const p of state.pending) {
+    const path = p.arguments?.file_path;
+    if (typeof path !== "string") continue;
+    const f = files.get(path) ?? { path, reads: 0, writes: 0, added: 0, removed: 0, created: false, change: null, state: "", last: 0, dir: false };
+    f.state = "approval"; f.pendingDiff = p.diff; f.last = Infinity;
+    files.set(path, f);
+  }
+  return [...files.values()].sort((a, b) => b.last - a.last);
+}
+
+const FILE_STATE = {
+  reading: ["live reading", "◔", "در حال خواندن…"],
+  writing: ["live", "✎", "در حال نوشتن…"],
+  approval: ["approval", "✋", "منتظر اجازه‌ی شما"],
+  read: ["", "📄", "خوانده شد"],
+  list: ["", "📁", "فهرست شد"],
+  search: ["", "🔍", "جست‌وجو شد"],
+  edited: ["", "✎", "ویرایش شد"],
+  created: ["", "✚", "ساخته شد"],
+  "write-failed": ["failed", "⚠", "نوشتن نشد"],
+  "read-failed": ["failed", "⚠", "خوانده نشد"],
+};
+
+let filesKey = "";
+function renderFiles() {
+  const list = $("fileList");
+  let tools = 0, lastTool = "";
+  for (const item of state.items) if (item.kind === "tool") { tools++; lastTool = `${item.id}${item.status}${item.change ? 1 : 0}`; }
+  const quick = `${tools}|${lastTool}|${state.pending.map((p) => p.id).join()}|${[...openRows].join()}`;
+  if (quick === filesKey) return;
+  filesKey = quick;
+  const files = fileActivity();
+  const busyFiles = files.filter((f) => ["reading", "writing", "approval"].includes(f.state)).length;
+  $("filesToggle").textContent = busyFiles ? `فایل‌ها (${files.length} · ${busyFiles} فعال)` : `فایل‌ها (${files.length})`;
+  const key = JSON.stringify(files.map((f) => [f.path, f.state, f.reads, f.writes, f.added, f.removed, openRows.has(f.path)]));
+  if (list.dataset.key === key) return;
+  list.dataset.key = key;
+  if (files.length === 0) {
+    list.replaceChildren(el("div", "empty-files", "هنوز فایلی خوانده یا نوشته نشده."));
+    return;
+  }
+  list.replaceChildren(...files.map((f) => {
+    const [cls, glyph, label] = FILE_STATE[f.state] ?? ["", "📄", f.state];
+    const row = el("div", `frow ${cls}${openRows.has(f.path) ? " open" : ""}`);
+    const line = el("div", "line1");
+    const counts = [];
+    if (f.reads > 1) counts.push(`${f.reads}× خواندن`);
+    if (f.writes > 1) counts.push(`${f.writes}× نوشتن`);
+    // Right-aligned inside, so a long path loses its start, not the file name.
+    const path = el("span", "fpath");
+    path.append(el("bdi", "", f.path));
+    line.append(el("span", "glyph", f.dir ? "📁" : glyph), path);
+    if (f.added || f.removed) line.append(chip({ added: f.added, removed: f.removed, created: false }));
+    row.append(line, el("div", "fstate", [label, ...counts].join(" · ")));
+    row.title = f.path;
+    row.onclick = (event) => {
+      if (event.target.closest("button, .diff")) return;
+      openRows.has(f.path) ? openRows.delete(f.path) : openRows.add(f.path);
+      renderFiles();
+    };
+    if (openRows.has(f.path)) {
+      const acts = el("div", "acts");
+      if (!f.dir && f.state !== "approval") {
+        const open = el("button", "", "باز کردن");
+        open.onclick = () => act("/api/open-file", { path: f.path });
+        acts.append(open);
+      }
+      const reveal = el("button", "", "نمایش در پوشه");
+      reveal.onclick = () => act("/api/open-file", { path: f.path, reveal: true });
+      acts.append(reveal);
+      row.append(acts);
+      const diff = f.state === "approval" ? f.pendingDiff : f.change;
+      if (diff) row.append(renderDiff(diff));
+    }
+    return row;
+  }));
+}
+$("filesToggle").onclick = () => $("files").classList.toggle("shown");
+$("filesClose").onclick = () => $("files").classList.remove("shown");
+
+/** A heads-up when the page is in the background: approvals and finished answers. */
+let lastAlert = "";
+function notify() {
+  const waiting = state.pending.length > 0;
+  document.title = waiting ? "✋ اجازه لازم است · ZX" : state.busy ? "… ZX" : "ZX AI";
+  const key = waiting ? `approval:${state.pending[0].id}` : !state.busy && state.status.phase === "done" ? `done:${state.items.at(-1)?.id}` : "";
+  if (key === "" || key === lastAlert) return;
+  lastAlert = key;
+  if (document.visibilityState === "visible" || !("Notification" in window) || Notification.permission !== "granted") return;
+  new Notification("ZX AI", { body: waiting ? `اجازه لازم است: ${state.pending[0].toolName} ${state.pending[0].summary}` : "پاسخ کامل شد", tag: "zx" });
+}
+
+function render() {
+  const scroller = $("scroller");
+  const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+  document.body.classList.remove("offline");
+  renderBar(); renderRail(); renderFooters(); renderGate(); renderStatus(); renderFiles(); notify();
+  if (atBottom) scroller.scrollTop = scroller.scrollHeight;
+}
+
+let source = null;
+function connect() {
+  if (source !== null) return;
+  source = new EventSource("/api/events");
+  source.onmessage = (event) => { state = JSON.parse(event.data); render(); };
+  source.onerror = async () => {
+    const alive = await fetch("/api/ping").then((r) => r.ok).catch(() => false);
+    if (alive || source === null) return;
+    source.close();
+    source = null;
+    // What is on screen is from before; nothing can be stopped or sent now.
+    document.body.classList.add("offline");
+    if (state) { state.busy = false; busySince = null; }
+    const banner = $("banner");
+    banner.hidden = false;
+    banner.dataset.why = "offline";
+    banner.textContent = "ZX خاموش است. از آیکون افزونه (پنل کناری) «روشن کردن ZX» را بزنید؛ این صفحه خودش دوباره وصل می‌شود.";
+    setTimeout(connect, 3000);
+  };
+}
+
+// composer
+const input = $("input");
+const grow = () => { input.style.height = "auto"; input.style.height = `${input.scrollHeight}px`; };
+input.addEventListener("input", grow);
+let sentAt = 0;
+async function submit(fromButton) {
+  if (!state) return;
+  if (state.busy) {
+    // Only the button stops, and not as the second half of a double click.
+    if (fromButton && Date.now() - sentAt > 800) act("/api/stop");
+    return;
+  }
+  const text = input.value.trim();
+  if (!text) return;
+  sentAt = Date.now();
+  const done = await act("/api/send", { text });
+  if (done) {
+    if (asked.at(-1) !== text) asked.push(text);
+    askedAt = asked.length;
+    input.value = "";
+    grow();
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => undefined);
+  }
+}
+const asked = [];
+let askedAt = 0;
+document.addEventListener("keydown", (e) => {
+  if ($("settings").open || $("aboutBox").open) return;
+  if (e.key === "Escape") {
+    if ($("files").classList.contains("shown")) { $("files").classList.remove("shown"); return; }
+    if (state?.busy) act("/api/stop");
+    return;
+  }
+  // Y / A / N answer the first approval, on any keyboard layout, but never
+  // while typing anywhere (the same keys are letters), and never on key repeat.
+  const typing = e.target.closest?.("input, select, textarea, [contenteditable]") != null;
+  const first = state?.pending[0];
+  const decision = { KeyY: "approved", KeyA: "always", KeyN: "denied" }[e.code];
+  if (first && decision && !typing && !e.repeat && !e.isComposing && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    act("/api/approve", { id: first.id, decision });
+  }
+});
+
+// Mode: applied after a short pause (arrow keys on a closed select fire a change
+// per option), and "all" only after a yes.
+let modeTimer = null;
+let modeAsking = false;
+function setMode(value) {
+  clearTimeout(modeTimer);
+  modeTimer = setTimeout(() => { modeTimer = null; act("/api/settings", { mode: value }); }, 400);
+}
+function askAll() {
+  modeAsking = true;
+  const note = $("modeNote");
+  const yes = el("button", "danger", "بله، همه خودکار");
+  const no = el("button", "", "نه");
+  const done = () => { modeAsking = false; render(); };
+  yes.onclick = () => { act("/api/settings", { mode: "all" }).then(done); };
+  no.onclick = done;
+  note.className = "hint warn";
+  note.replaceChildren("هیچ نوشتن و اجرایی دیگر اجازه نمی‌خواهد. مطمئنید؟", yes, no);
+}
+$("mode").onchange = (e) => {
+  const value = e.target.value;
+  if (value === "all") {
+    clearTimeout(modeTimer);
+    modeTimer = null;
+    e.target.value = state.settings.mode;
+    askAll();
+    return;
+  }
+  setMode(value);
+};
+input.addEventListener("keydown", (e) => {
+  // History: ↑ older, ↓ newer, while the box is empty or still shows a recalled message.
+  const recalled = input.value === "" || input.value === asked[askedAt];
+  if ((e.key === "ArrowUp" || e.key === "ArrowDown") && recalled && asked.length && !e.shiftKey) {
+    e.preventDefault();
+    askedAt = Math.min(asked.length, Math.max(0, askedAt + (e.key === "ArrowUp" ? -1 : 1)));
+    input.value = asked[askedAt] ?? "";
+    grow();
+    return;
+  }
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(false); }
+});
+$("send").onclick = () => submit(true);
+$("fresh").onclick = () => act("/api/new-chat");
+$("show").onclick = () => act("/api/show");
+$("site").onchange = (e) => act("/api/settings", { siteId: e.target.value });
+$("open").onclick = () => act("/api/open-folder");
+$("pick").onclick = async () => {
+  $("pick").disabled = true;
+  try {
+    const result = await api("/api/pick-folder", {});
+    if (result.path === null) return;
+  } catch (error) {
+    // No native dialog here: fall back to typing the path.
+    openSettings();
+    $("wsPath").focus();
+    $("siteOut").textContent = error.message;
+  } finally {
+    $("pick").disabled = false;
+  }
+};
+
+// settings
+function currentSite() { return state.sites.find((s) => s.id === state.siteId); }
+async function openSettings() {
+  if (!state) return;
+  $("wsPath").value = state.workspace ?? "";
+  $("modes").replaceChildren(...Object.entries(MODES).map(([value, [name, text]]) => {
+    const label = el("label");
+    const radio = el("input");
+    radio.type = "radio"; radio.name = "mode"; radio.value = value;
+    radio.checked = state.settings.mode === value;
+    radio.onchange = () => setMode(value);
+    const words = el("span", "", name);
+    words.append(el("small", "", text));
+    label.append(radio, words);
+    return label;
+  }));
+  $("maxSteps").value = state.settings.maxSteps;
+  $("maxChars").value = state.settings.maxChars;
+  const site = currentSite();
+  $("siteName").textContent = `— ${site.label}`;
+  $("siteJson").value = JSON.stringify(site, null, 2);
+  $("siteOut").textContent = "";
+  $("extlog").replaceChildren(...(state.extension.log.length ? state.extension.log : ["(خالی)"]).map((line) => el("div", "", line)));
+  $("settings").showModal();
+  try {
+    const entries = await api("/api/audit?limit=60");
+    $("audit").replaceChildren(...entries.map((e) => el("div", "", `${e.timestamp?.slice(11, 19) ?? ""}  ${e.status.padEnd(6)} ${e.toolName}: ${e.summary}`)));
+  } catch { $("audit").textContent = ""; }
+}
+$("gear").onclick = openSettings;
+$("aboutBtn").onclick = () => {
+  if (state) {
+    $("aboutVersion").textContent = state.version;
+    $("aboutMeta").textContent = `app ${state.version} · extension ${state.extension.version ?? "—"}${state.extension.browser ? ` (${state.extension.browser})` : ""}`;
+  }
+  $("aboutBox").showModal();
+};
+$("restartApp").onclick = async () => {
+  if (await act("/api/restart-app")) $("settings").close();
+};
+// Two clicks rather than confirm(): dialogs may not show inside the side panel.
+$("power").onclick = async () => {
+  const power = $("power");
+  if (power.dataset.armed !== "1") {
+    power.dataset.armed = "1";
+    power.textContent = "خاموش شود؟";
+    setTimeout(() => { power.dataset.armed = ""; power.textContent = "⏻"; }, 3000);
+    return;
+  }
+  await act("/api/shutdown");
+};
+// Enter in a field must not close the dialog (and lose the edit).
+$("settings").querySelector("form").addEventListener("submit", (e) => {
+  if (e.submitter?.value !== "close") e.preventDefault();
+});
+$("wsPath").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("wsSave").click(); } });
+$("wsSave").onclick = async () => { if (await act("/api/workspace", { path: $("wsPath").value })) $("settings").close(); };
+$("limitsSave").onclick = () => act("/api/settings", { maxSteps: Number($("maxSteps").value), maxChars: Number($("maxChars").value) });
+$("siteSave").onclick = async () => {
+  let value;
+  try { value = JSON.parse($("siteJson").value); } catch (e) { $("siteOut").textContent = `JSON: ${e.message}`; return; }
+  const id = value.id ?? currentSite().id;
+  if (await act("/api/settings", { site: { id, value } })) {
+    if (id !== state.siteId) await act("/api/settings", { siteId: id });
+    $("siteOut").textContent = "ذخیره شد";
+  }
+};
+$("siteReset").onclick = async () => {
+  if (await act("/api/settings", { site: { id: currentSite().id, value: null } })) {
+    setTimeout(() => { $("siteJson").value = JSON.stringify(currentSite(), null, 2); }, 300);
+  }
+};
+$("probe").onclick = async () => {
+  $("siteOut").textContent = "…";
+  try {
+    const r = await api("/api/probe", {});
+    const mark = (k) => `${r[k] ? "✓" : "✗"} ${k.padEnd(9)} ${r[k] ?? "پیدا نشد"}`;
+    const buttons = (r.buttons ?? []).map((b, i) =>
+      `  [${i + 1}] <${b.tag}> ${b.label || "(no label)"} ${b.testid ? `data-testid=${b.testid} ` : ""}.${b.classes.replace(/ /g, ".")}${b.enabled ? "" : " disabled"}${b.toggle ? " toggle" : ""}`);
+    $("siteOut").textContent = [r.url, mark("composer"), mark("send"), mark("stop"), mark("reply"), `  replies on page: ${r.replies}`,
+      buttons.length ? "buttons beside the message box:" : "", ...buttons].join("\n");
+  } catch (e) { $("siteOut").textContent = e.message; }
+};
+
+connect();
+</script>
+</body>
+</html>

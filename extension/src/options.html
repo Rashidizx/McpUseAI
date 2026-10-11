@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>ZX AI</title>
+<style>
+  :root { color-scheme: light dark; --line: #8884; }
+  body { font: 14px/1.6 system-ui, "Segoe UI", Tahoma, sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
+  h1 { font-size: 18px; margin: 0 0 16px; }
+  section { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; }
+  label { display: block; margin-bottom: 6px; }
+  input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; width: 140px; direction: ltr; }
+  input.wide { width: 260px; }
+  button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; }
+  .ok { color: #16a34a; } .bad { color: #dc2626; }
+  small { opacity: .75; }
+  .about p { margin: 6px 0; }
+</style>
+</head>
+<body>
+  <h1>ZX AI</h1>
+  <section>
+    <div>وضعیت اتصال به برنامه: <b id="status">…</b></div>
+    <div style="margin-top:8px"><button id="on">روشن کردن ZX</button> <button id="off">خاموش کردن ZX</button></div>
+    <small id="svc"></small>
+  </section>
+  <section>
+    <label for="port">پورت برنامه</label>
+    <input id="port" type="number" min="1" max="65535">
+    <button id="save">ذخیره</button>
+    <div><small>فقط اگر برنامه را با <code>--port</code> اجرا کرده‌اید عوض کنید.</small></div>
+  </section>
+  <section>
+    <label for="host">اجازه روی یک سایت جدید (مثلاً <code>chat.mistral.ai</code>)</label>
+    <input id="host" class="wide" placeholder="example.com">
+    <button id="allow">اجازه بده</button>
+    <div id="allowed"><small></small></div>
+  </section>
+  <section class="about">
+    <b>درباره</b>
+    <p>ZX AI <span id="version" dir="ltr"></span>، ساخته‌ی <b>ابراهیم رشیدی</b> (<span dir="ltr">Ebrahim Rashidi</span>).</p>
+    <p>هر برنامه‌نویسی که بخواهد می‌تواند به توسعه‌ی این پروژه بپیوندد؛ issue یا pull request در GitHub:</p>
+    <p><a href="https://github.com/Rashidizx/McpUseAI" target="_blank" rel="noopener" dir="ltr">github.com/Rashidizx/McpUseAI</a></p>
+  </section>
+  <script src="options.js"></script>
+</body>
+</html>

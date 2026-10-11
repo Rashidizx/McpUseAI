@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "ZX AI",
+  "version": "1.0.0",
+  "description": "Lets the ZX AI app on this computer type into your open AI chat tabs and read the replies.",
+  "homepage_url": "https://github.com/Rashidizx/McpUseAI",
+  "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmInCSCyZwxER/UdbDtQ0VHUsrGykZSRpKeNIXWwCQIw02Eu4WXQ3eO8MdNPgfUOzP0nGHCogDx69BTugC3lGuY4PsNUA3CQMzJ3ptLJOpANmvA0qIeBDrVgNjQIlQczLADtcZAe8QXs6KjxCTcILVfTx04c71WM4dcInJflCdAGw7CIWhgWup6TWm3W7RyOP7x2vQVdweuaWlzfA2xyk4jAzoR+jjR+PZkGW2UHU+xYec2oK9SgTJbTkyeG88lZl+2+UNO9b6stMgPbv9frsXbWVGWRR7ZZnaA9R/hU3g8FOiHW8QgfEkDv2O9wVs5p/RkZnGAFYSGreg6eUYlqMSwIDAQAB",
+  "permissions": [
+    "scripting",
+    "storage",
+    "alarms",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://claude.ai/*",
+    "https://chat.deepseek.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "action": {
+    "default_title": "ZX AI",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*",
+        "https://chat.deepseek.com/*"
+      ],
+      "js": [
+        "awake.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}
